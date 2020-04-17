@@ -102,11 +102,44 @@ On draw
 
 Leaflet Draw runs every time a marker is added to the map. When this happens
 ---------------- */
+var coor
+var token='pk.eyJ1IjoibGl6aXF1biIsImEiOiJjazhnZG1kOGkwMGlwM2VwbmVqNXd5eGhjIn0.Pd66q4rj8ncYTNtcFGxUGQ'
+
 
 map.on('draw:created', function (e) {
+  //add the marker
   var type = e.layerType; // The type of shape
   var layer = e.layer; // The Leaflet layer for the shape
   var id = L.stamp(layer); // The unique Leaflet ID for the
+  $('#button-reset').show();
+  map.addLayer(layer);
+  state.markers.push(layer);
+  //add the route
+  var lat = layer._latlng.lat;
+  var long=layer._latlng.lng;
+  if (state.markers.length ==1){
+    coor=`${long},${lat}`
+  } else{
+    coor = coor +`;${long},${lat}`;
+    var dirRequest =`https://api.mapbox.com/directions/v5/mapbox/walking/${coor}.json?access_token=${token}`
+    $.ajax(dirRequest).done(function(directions){
+       var route = turf.lineString(polyline.decode(directions.routes[0].geometry));
+       var lines = polyline.decode(directions.routes[0].geometry);
+       lines=_.map(lines,function(coordinates){return [coordinates[1],coordinates[0]];});
+       var myStyle = {
+         "color": "#ff7800",
+         "weight": 5,
+         "opacity": 0.65
+       };
+       if (state.line != undefined){
+         map.removeLayer(state.line);
+       }
+       var finalroute=L.geoJSON(turf.lineString(lines),{
+         style:myStyle
+       });
+       state.line=finalroute;
+       finalroute.addTo(map);
+  });
+}
 
-  console.log('Do something with the layer you just created:', layer, layer._latlng);
 });
